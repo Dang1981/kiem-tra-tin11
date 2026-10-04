@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiểm Tra Thường Xuyên Tin Học 11 - Chủ Đề 7 (GIMP)</title>
+  <!-- Tailwind CSS & Font Awesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- SheetJS & QRCode.js & Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0b1120; }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen p-3 md:p-6 flex flex-col items-center">
+
+  <!-- Header -->
+  <header class="w-full max-w-4xl bg-slate-900/90 border border-slate-800 p-4 md:p-5 rounded-2xl shadow-2xl flex flex-wrap justify-between items-center gap-4 mb-6 backdrop-blur-md">
+    <div>
+      <span class="bg-indigo-600/30 text-indigo-400 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border border-indigo-500/30">
+        Tin Học 11 • Kết Nối Tri Thức
+      </span>
+      <h1 class="text-lg md:text-xl font-black text-white mt-1">ĐỀ KIỂM TRA ĐÁNH GIÁ THƯỜNG XUYÊN: CHỦ ĐỀ 7 (GIMP)</h1>
+      <p class="text-xs text-slate-400">Thời gian làm bài: 15 phút • Thang điểm 10 • 30 câu trắc nghiệm</p>
+    </div>
+
+    <!-- Nút điều khiển giáo viên -->
+    <div class="flex items-center gap-2">
+      <button onclick="toggleQRModal()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center gap-1.5 shadow">
+        <i class="fa-solid fa-qrcode"></i> <span>Mã QR</span>
+      </button>
+      <button onclick="exportTeacherExcel()" class="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow">
+        <i class="fa-solid fa-file-excel"></i> <span>Xuất điểm</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- GIAO DIỆN 1: MÀN HÌNH ĐĂNG KÝ THÔNG TIN LÀM BÀI (TRANG CHỦ) -->
+  <section id="screen-login" class="w-full max-w-md bg-slate-900/95 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl text-center space-y-5">
+    <div class="w-16 h-16 bg-indigo-600/20 text-indigo-400 rounded-2xl flex items-center justify-center text-3xl mx-auto border border-indigo-500/30">
+      <i class="fa-solid fa-user-graduate"></i>
+    </div>
+    
+    <div>
+      <h2 class="text-xl font-black text-white">Xác Nhận Thí Sinh</h2>
+      <p class="text-xs text-slate-400 mt-1">Vui lòng chọn lớp và họ tên của em để nhận đề kiểm tra 15 phút</p>
+    </div>
+
+    <!-- Chọn thư mục Excel nếu mở trực tiếp offline -->
+    <div class="text-left bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+      <label class="text-[11px] font-bold text-slate-400 block mb-1">
+        <i class="fa-solid fa-folder-tree text-amber-400 mr-1"></i> Liên kết file danh sách (nếu mở cục bộ):
+      </label>
+      <input type="file" id="folderInput" webkitdirectory directory class="text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:bg-slate-800 file:text-slate-300 cursor-pointer" onchange="handleFolderSelect(event)">
+    </div>
+
+    <!-- Chọn lớp Khối 11 -->
+    <div class="text-left space-y-1.5">
+      <label class="text-xs font-bold text-slate-300">1. Chọn lớp học:</label>
+      <select id="select-class" onchange="loadStudentListByClass()" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-indigo-500">
+        <option value="">-- Chọn lớp của em --</option>
+        <option value="11B3">Lớp 11B3</option>
+        <option value="11B5">Lớp 11B5</option>
+        <option value="11B7">Lớp 11B7</option>
+        <option value="11B8">Lớp 11B8</option>
+        <option value="11B9">Lớp 11B9</option>
+        <option value="11B12">Lớp 11B12</option>
+      </select>
+      <div id="class-status" class="text-[11px] text-slate-500 italic"></div>
+    </div>
+
+    <!-- Chọn tên học sinh -->
+    <div class="text-left space-y-1.5">
+      <label class="text-xs font-bold text-slate-300">2. Họ và tên học sinh:</label>
+      <select id="select-student" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none focus:border-indigo-500" disabled>
+        <option value="">-- Vui lòng chọn lớp trước --</option>
+      </select>
+    </div>
+
+    <button onclick="startExam()" class="w-full py-3.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 hover:from-blue-500 hover:to-sky-500 text-white font-black rounded-xl shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2">
+      <span>BẮT ĐẦU LÀM BÀI (15 PHÚT)</span>
+      <i class="fa-solid fa-arrow-right text-xs"></i>
+    </button>
+  </section>
+
+  <!-- GIAO DIỆN 2: PHÒNG THI TRỰC TUYẾN -->
+  <section id="screen-exam" class="w-full max-w-4xl space-y-6 hidden">
+    
+    <!-- Thanh thông tin bài thi cố định -->
+    <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-xl flex flex-wrap justify-between items-center gap-4 sticky top-2 z-20 backdrop-blur-md">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-black">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <div>
+          <div class="text-sm font-black text-white" id="exam-student-name">Thí sinh: ...</div>
+          <div class="text-xs text-slate-400">
+            Lớp: <b class="text-sky-400" id="exam-student-class">...</b> | 
+            Mã đề: <span class="bg-amber-950/80 text-amber-300 font-black px-2 py-0.5 rounded border border-amber-600/40 text-xs" id="exam-code">1101</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Đồng hồ đếm ngược 15:00 & Nút nộp bài -->
+      <div class="flex items-center gap-3">
+        <div class="bg-slate-950 px-3.5 py-1.5 rounded-xl border border-slate-800 flex items-center gap-2 text-amber-400 font-mono font-black text-sm">
+          <i class="fa-solid fa-stopwatch animate-pulse"></i>
+          <span id="exam-timer">15:00</span>
+        </div>
+        <button onclick="submitExam(false)" class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs md:text-sm rounded-xl shadow-md transition transform active:scale-95 flex items-center gap-1.5">
+          <i class="fa-solid fa-paper-plane text-xs"></i> <span>NỘP BÀI</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Thanh tiến độ hoàn thành -->
+    <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+      <span>Tiến độ: <b id="progress-text" class="text-sky-400">0 / 30</b> câu</span>
+      <div class="w-1/2 bg-slate-800 rounded-full h-2 overflow-hidden">
+        <div id="progress-bar" class="bg-gradient-to-r from-blue-500 to-emerald-400 h-2 w-0 transition-all duration-300"></div>
+      </div>
+    </div>
+
+    <!-- Danh sách 30 câu hỏi -->
+    <div id="questions-container" class="space-y-4"></div>
+
+    <!-- Nút nộp bài cuối trang -->
+    <div class="text-center pt-4 pb-12">
+      <button onclick="submitExam(false)" class="px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-base rounded-2xl shadow-xl hover:from-emerald-500 hover:to-teal-500 transition transform active:scale-95">
+        <i class="fa-solid fa-check-circle mr-2"></i> HOÀN THÀNH VÀ NỘP BÀI THI
+      </button>
+    </div>
+  </section>
+
+  <!-- GIAO DIỆN 3: KẾT QUẢ ĐIỂM SỐ -->
+  <section id="screen-result" class="w-full max-w-lg bg-slate-900/95 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl text-center space-y-6 hidden">
+    <div class="w-20 h-20 bg-amber-400/20 text-amber-400 rounded-full flex items-center justify-center text-4xl mx-auto shadow-inner">
+      <i class="fa-solid fa-award"></i>
+    </div>
+
+    <div>
+      <h2 class="text-2xl font-black text-white">KẾT QUẢ ĐÁNH GIÁ THƯỜNG XUYÊN</h2>
+      <p class="text-xs text-slate-400 mt-1" id="result-timestamp">Thời gian nộp: ...</p>
+    </div>
+
+    <div class="bg-slate-950/80 p-5 rounded-2xl border border-slate-800 space-y-3">
+      <div class="flex justify-between text-xs text-slate-400">
+        <span>Thí sinh: <b class="text-white" id="res-name">...</b></span>
+        <span>Lớp: <b class="text-white" id="res-class">...</b></span>
+        <span>Mã đề: <b class="text-amber-400" id="res-code">...</b></span>
+      </div>
+      <hr class="border-slate-800">
+      <div class="text-xs uppercase font-bold text-slate-400">ĐIỂM SỐ (THANG ĐIỂM 10)</div>
+      <div id="res-score-10" class="text-5xl font-black text-amber-400 animate-bounce">0.0</div>
+      <div class="text-xs font-semibold text-slate-400" id="res-correct-count">Đúng: 0 / 30 câu</div>
+    </div>
+
+    <!-- Nút trở về trang chủ duy nhất -->
+    <div>
+      <button onclick="goHome()" class="w-full py-3.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 hover:from-blue-500 hover:to-sky-500 text-white font-black text-sm rounded-xl shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2">
+        <i class="fa-solid fa-house"></i>
+        <span>TRỞ VỀ TRANG CHỦ</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- MODAL XEM MÃ QR -->
+  <div id="modal-qr" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-sm w-full text-center space-y-4">
+      <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+        <h3 class="text-sm font-black text-white">Quét Mã QR Làm Bài (15 Phút)</h3>
+        <button onclick="toggleQRModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="bg-white p-4 rounded-2xl inline-block shadow-lg mx-auto" id="qrcode-box"></div>
+      <p class="text-xs text-slate-400">Học sinh dùng điện thoại quét mã để mở trang làm bài kiểm tra.</p>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. NGÂN HÀNG 30 CÂU HỎI TIN HỌC 11 (CHỦ ĐỀ 7 - GIMP)
+    // =========================================================================
+    const masterQuestions = [
+      {
+        id: 1, lesson: "Bài 25", level: "Nhận biết",
+        q: "Độ phân giải của ảnh số thường được đo bằng đơn vị nào sau đây?",
+        options: ["dpi hoặc ppi", "Byte hoặc KB", "Hz hoặc GHz", "Bit hoặc Pixel"],
+        ans: 0,
+        exp: "Độ phân giải ảnh in và hiển thị số thường dùng dpi (dots per inch) hoặc ppi (pixels per inch)."
+      },
+      {
+        id: 2, lesson: "Bài 25", level: "Nhận biết",
+        q: "Phần mềm GIMP là loại phần mềm gì?",
+        options: [
+          "Phần mềm chỉnh sửa ảnh thương mại trả phí",
+          "Phần mềm chỉnh sửa ảnh bitmap mã nguồn mở và miễn phí",
+          "Phần mềm dựng video chuyên nghiệp",
+          "Hệ điều hành máy tính"
+        ],
+        ans: 1,
+        exp: "GIMP (GNU Image Manipulation Program) là phần mềm mã nguồn mở hoàn toàn miễn phí."
+      },
+      {
+        id: 3, lesson: "Bài 25", level: "Nhận biết",
+        q: "Tệp ảnh đang làm việc trong GIMP khi chọn lệnh Save (Ctrl+S) sẽ được lưu dưới định dạng mặc định nào?",
+        options: [".jpg", ".png", ".xcf", ".gif"],
+        ans: 2,
+        exp: "Tệp dự án nguyên bản của GIMP lưu các lớp có đuôi mặc định là .xcf."
+      },
+      {
+        id: 4, lesson: "Bài 25", level: "Thông hiểu",
+        q: "Để xuất bức ảnh đã chỉnh sửa trong GIMP ra định dạng tệp chuẩn dùng cho in ấn hay đưa lên mạng (.jpg, .png), em sử dụng lệnh nào?",
+        options: ["File -> Save", "File -> Export As...", "File -> Open", "File -> New"],
+        ans: 1,
+        exp: "Dùng File -> Export As... để xuất ảnh ra các định dạng chuẩn phổ thông."
+      },
+      {
+        id: 5, lesson: "Bài 25", level: "Thông hiểu",
+        q: "Thao tác sử dụng công cụ Crop trong GIMP có tác dụng gì đối với bức ảnh?",
+        options: [
+          "Phóng to hoặc thu nhỏ vùng hiển thị",
+          "Xoay bức ảnh theo một góc tùy chỉnh",
+          "Cắt và giữ lại một phần ảnh, loại bỏ phần thừa xung quanh",
+          "Điều chỉnh độ sáng tối của ảnh"
+        ],
+        ans: 2,
+        exp: "Crop dùng để cắt cúp khung hình, giữ lại phần mong muốn và xén bỏ phần biên thừa."
+      },
+      {
+        id: 6, lesson: "Bài 25", level: "Vận dụng",
+        q: "Một bức ảnh số có kích thước 3000 x 2000 điểm ảnh (pixel). Nếu in bức ảnh này với độ phân giải 300 dpi, kích thước ảnh nhận được trên giấy là bao nhiêu inch?",
+        options: ["10 x 6.67 inch", "30 x 20 inch", "100 x 66.7 inch", "3 x 2 inch"],
+        ans: 0,
+        exp: "Chiều rộng = 3000 / 300 = 10 inch. Chiều cao = 2000 / 300 = 6.67 inch."
+      },
+      {
+        id: 7, lesson: "Bài 25", level: "Vận dụng cao",
+        q: "Một bức ảnh bị nghiêng 5 độ và thừa nhiều chi tiết ở hai bên mép. Trình tự các thao tác hợp lý nhất trong GIMP để xử lý ảnh trước khi xuất ra định dạng JPG là gì?",
+        options: [
+          "Dùng Rotate (Shift+R) xoay ảnh thẳng -> Dùng Crop (Shift+C) cắt bỏ viền thừa -> Chọn File -> Export As... xuất tệp .jpg",
+          "Dùng Crop cắt ảnh -> Chọn File -> Save -> Dùng Rotate xoay ảnh",
+          "Chọn File -> Export As... -> Dùng Rotate xoay ảnh -> Dùng Crop cắt ảnh",
+          "Dùng Zoom phóng to -> Chọn File -> Save As .jpg -> Dùng Rotate xoay ảnh"
+        ],
+        ans: 0,
+        exp: "Phải xoay thẳng ảnh trước rồi mới cắt bỏ phần viền thừa lệch góc, sau đó xuất file."
+      },
+      {
+        id: 8, lesson: "Bài 26", level: "Nhận biết",
+        q: "Công cụ nào trong GIMP dùng để điều chỉnh trực tiếp độ sáng và độ tương phản của toàn bộ ảnh hoặc vùng chọn?",
+        options: ["Brightness-Contrast", "Free Select Tool", "Rectangle Select Tool", "Paint Brush"],
+        ans: 0,
+        exp: "Menu Colors -> Brightness-Contrast dùng để chỉnh sáng/tối và độ tương phản."
+      },
+      {
+        id: 9, lesson: "Bài 26", level: "Nhận biết",
+        q: "Phím tắt nào sau đây dùng để kích hoạt công cụ chọn vùng hình chữ nhật (Rectangle Select Tool) trong GIMP?",
+        options: ["Phím R", "Phím E", "Phím U", "Phím Shift+R"],
+        ans: 0,
+        exp: "Phím tắt R (Rectangle) dùng để gọi công cụ chọn vùng chữ nhật."
+      },
+      {
+        id: 10, lesson: "Bài 26", level: "Nhận biết",
+        q: "Công cụ Fuzzy Select Tool (phím U) trong GIMP có chức năng gì?",
+        options: [
+          "Chọn vùng hình elip",
+          "Chọn vùng ảnh có màu sắc tương tự nhau (chọn theo màu liền kề)",
+          "Chọn vùng tự do bằng cách vẽ đường bao",
+          "Cắt xén khung hình"
+        ],
+        ans: 1,
+        exp: "Fuzzy Select (cây đũa thần - phím U) tự động khoanh vùng các điểm ảnh đồng màu liền kề."
+      },
+      {
+        id: 11, lesson: "Bài 26", level: "Thông hiểu",
+        q: "Khi đang có một vùng chọn, nếu muốn chọn thêm một vùng ảnh mới bổ sung vào vùng chọn cũ, em cần nhấn giữ phím nào trong lúc vẽ vùng chọn mới?",
+        options: ["Phím Ctrl", "Phím Shift", "Phím Alt", "Phím Space"],
+        ans: 1,
+        exp: "Nhấn giữ phím Shift chuyển sang chế độ cộng thêm (Add to current selection)."
+      },
+      {
+        id: 12, lesson: "Bài 26", level: "Thông hiểu",
+        q: "Muốn loại bỏ (bớt đi) một phần của vùng chọn hiện tại, em thao tác như thế nào?",
+        options: [
+          "Nhấn giữ phím Shift và vẽ vùng chọn đè lên",
+          "Nhấn giữ phím Ctrl và vẽ vùng chọn đè lên phần cần bỏ",
+          "Nhấn phím Enter",
+          "Nhấn phím Esc"
+        ],
+        ans: 1,
+        exp: "Nhấn giữ phím Ctrl kích hoạt chế độ trừ bớt (Subtract from current selection)."
+      },
+      {
+        id: 13, lesson: "Bài 26", level: "Thông hiểu",
+        q: "Công cụ Color Balance trong menu Colors của GIMP cho phép điều chỉnh yếu tố nào sau đây?",
+        options: [
+          "Cân bằng và thay đổi dải màu (Red, Green, Blue) trên các dải sáng Midtones, Shadows, Highlights",
+          "Thay đổi kích thước và độ phân giải ảnh",
+          "Tẩy xóa các vết xước trên ảnh",
+          "Tách lớp ảnh thành các khung hình hoạt họa"
+        ],
+        ans: 0,
+        exp: "Color Balance dùng để cân bằng sắc thái màu theo từng vùng sáng tối."
+      },
+      {
+        id: 14, lesson: "Bài 26", level: "Vận dụng",
+        q: "Em có bức ảnh chụp bông hoa màu đỏ nằm trên nền lá màu xanh. Muốn làm bông hoa sáng lên mà không làm thay đổi màu sắc của chiếc lá, em nên thực hiện theo quy trình nào?",
+        options: [
+          "Chọn Colors -> Brightness-Contrast cho toàn bộ ảnh",
+          "Dùng Fuzzy Select Tool hoặc Free Select Tool chọn bông hoa -> Vào Colors -> Brightness-Contrast tăng độ sáng",
+          "Dùng Eraser xóa chiếc lá -> Tăng độ sáng",
+          "Dùng Crop cắt bông hoa ra khỏi bức ảnh"
+        ],
+        ans: 1,
+        exp: "Khoanh vùng bông hoa bằng công cụ chọn rồi mới áp dụng Brightness-Contrast lên vùng chọn đó."
+      },
+      {
+        id: 15, lesson: "Bài 26", level: "Vận dụng cao",
+        q: "Khi muốn lưu lại các thiết lập thông số độ sáng và độ tương phản đã tùy chỉnh trong hộp thoại Brightness-Contrast để tái sử dụng cho các bức ảnh khác sau này, em thực hiện ra sao?",
+        options: [
+          "Nhấn nút dấu cộng '+' bên cạnh ô Presets, nhập tên thiết lập rồi nhấn OK",
+          "Chọn File -> Save As",
+          "Nhấn nút Reset trong hộp thoại",
+          "Xuất tệp ra định dạng .xcf"
+        ],
+        ans: 0,
+        exp: "Nút '+' cạnh Presets cho phép lưu preset thông số để dùng lại lần sau."
+      },
+      {
+        id: 16, lesson: "Bài 27", level: "Nhận biết",
+        q: "Vai trò quan trọng nhất của Lớp ảnh (Layer) trong phần mềm chỉnh sửa ảnh GIMP là gì?",
+        options: [
+          "Tăng dung lượng của bức ảnh",
+          "Cho phép xử lý độc lập từng phần của bức ảnh mà không làm ảnh hưởng đến các phần khác",
+          "Tự động sửa lỗi nhòe ảnh",
+          "Xuất ảnh ra file GIF"
+        ],
+        ans: 1,
+        exp: "Layer cho phép phân tách các đối tượng để biên tập độc lập không tác động lẫn nhau."
+      },
+      {
+        id: 17, lesson: "Bài 27", level: "Nhận biết",
+        q: "Để thêm độ trong suốt cho một lớp ảnh trong GIMP, em nháy chuột phải vào lớp đó trong hộp thoại Layer và chọn lệnh nào?",
+        options: ["Add Alpha Channel", "Delete Layer", "Duplicate Layer", "Merge Down"],
+        ans: 0,
+        exp: "Lệnh Add Alpha Channel tạo kênh trong suốt cho lớp."
+      },
+      {
+        id: 18, lesson: "Bài 27", level: "Nhận biết",
+        q: "Biểu tượng con mắt nằm cạnh tên mỗi lớp ảnh trong hộp thoại Layer có chức năng gì?",
+        options: [
+          "Khóa không cho sửa lớp ảnh",
+          "Ẩn hoặc hiện lớp ảnh trên màn hình làm việc",
+          "Nhân đôi lớp ảnh",
+          "Đổi tên lớp ảnh"
+        ],
+        ans: 1,
+        exp: "Biểu tượng con mắt bật/tắt khả năng hiển thị của layer đó."
+      },
+      {
+        id: 19, lesson: "Bài 27", level: "Thông hiểu",
+        q: "Sự khác biệt cơ bản giữa công cụ Clone và công cụ Healing trong GIMP khi xử lý vết xước/mụn trên ảnh là gì?",
+        options: [
+          "Clone xóa hoàn toàn ảnh, Healing tô màu mới",
+          "Clone sao chép nguyên vẹn điểm ảnh vùng nguồn, Healing kết hợp hòa trộn điểm ảnh vùng chọn với vùng nguồn giúp giảm lem màu",
+          "Clone chỉ dùng cho ảnh đen trắng, Healing dùng cho ảnh màu",
+          "Clone vẽ hình elip, Healing vẽ hình chữ nhật"
+        ],
+        ans: 1,
+        exp: "Healing hòa trộn kết cấu và màu sắc xung quanh giúp vết tẩy xóa tự nhiên hơn Clone."
+      },
+      {
+        id: 20, lesson: "Bài 27", level: "Thông hiểu",
+        q: "Nếu một lớp ảnh KHÔNG có kênh Alpha (Alpha Channel), khi dùng công cụ Eraser (tẩy) để xóa một vùng ảnh trên lớp đó, kết quả sẽ là gì?",
+        options: [
+          "Vùng bị xóa trở nên trong suốt nhìn xuyên qua lớp dưới",
+          "Vùng bị xóa sẽ bị tô bằng màu nền (Background color) hiện tại",
+          "Vùng bị xóa chuyển thành màu đen",
+          "Bị báo lỗi không thể thực hiện"
+        ],
+        ans: 1,
+        exp: "Không có kênh Alpha thì tẩy sẽ hiện màu nền (Background color) chứ không tạo độ trong suốt."
+      },
+      {
+        id: 21, lesson: "Bài 27", level: "Vận dụng",
+        q: "Để xóa một sợi dây điện chăng ngang bầu trời xanh bằng công cụ Healing, thao tác nào sau đây là chuẩn xác nhất?",
+        options: [
+          "Chọn Healing -> Nhấn giữ phím Ctrl và nháy chuột vào vùng bầu trời trong (vùng nguồn) -> Rê chuột vẽ đè lên đoạn dây điện cần xóa",
+          "Chọn Healing -> Nhấn giữ phím Shift và nháy chuột vào sợi dây điện",
+          "Chọn Eraser xóa bầu trời rồi dùng Bucket Fill tô lại",
+          "Chọn Crop cắt bỏ phần có sợi dây điện"
+        ],
+        ans: 0,
+        exp: "Giữ Ctrl nhấp chuột để lấy mẫu nền trời sạch, sau đó vẽ đè lên sợi dây điện."
+      },
+      {
+        id: 22, lesson: "Bài 27", level: "Vận dụng",
+        q: "Trong GIMP có 3 lớp ảnh xếp theo thứ tự từ dưới lên là: Lớp 1 (Ảnh nền), Lớp 2 (Bông hoa), Lớp 3 (Chiếc lá). Biết Lớp 2 và Lớp 3 đều có kênh Alpha và độ mở rộng 100%. Khi nhìn từ trên xuống em sẽ thấy bức ảnh hiển thị như thế nào?",
+        options: [
+          "Chỉ thấy Lớp 1",
+          "Thấy Chiếc lá nằm đè lên Bông hoa, và Bông hoa nằm trên Ảnh nền ở các khoảng không che khuất",
+          "Chỉ thấy Chiếc lá và Ảnh nền, không thấy Bông hoa",
+          "Ba lớp bị trộn lẫn thành màu xám"
+        ],
+        ans: 1,
+        exp: "Lớp xếp trên cùng (Lớp 3) che các lớp bên dưới theo thứ tự từ trên nhìn xuống."
+      },
+      {
+        id: 23, lesson: "Bài 27", level: "Vận dụng cao",
+        q: "Khi thực hiện tách một nhân vật ra khỏi nền ảnh xám để ghép sang bầu trời xanh tươi sáng, tại sao người thiết kế nên thực hiện thao tác Duplicate Layer (nhân đôi lớp) trước khi thực hiện cắt tách?",
+        options: [
+          "Để tăng độ phân giải cho nhân vật",
+          "Để giữ lại lớp gốc làm phương án dự phòng, tránh làm hỏng dữ liệu ảnh ban đầu trong quá trình chỉnh sửa",
+          "Để bức ảnh tự động có hiệu ứng ảnh động",
+          "Bắt buộc phải nhân đôi lớp thì GIMP mới cho xuất file .png"
+        ],
+        ans: 1,
+        exp: "Duplicate Layer tạo bản sao dự phòng giúp bảo toàn file gốc khi có sai sót."
+      },
+      {
+        id: 24, lesson: "Bài 28", level: "Nhận biết",
+        q: "Bản chất của một tệp ảnh động định dạng GIF tạo bởi GIMP là gì?",
+        options: [
+          "Một đoạn video MP4 ngắn",
+          "Tập hợp gồm nhiều lớp ảnh (Layer), trong đó mỗi lớp ảnh tương ứng với một khung hình (frame)",
+          "Một ảnh đơn lẻ có chứa hiệu ứng âm thanh",
+          "Một tệp văn bản mã hóa hình ảnh"
+        ],
+        ans: 1,
+        exp: "Ảnh động GIF trong GIMP được tạo từ nhiều lớp ảnh đóng vai trò là các khung hình chuyển động."
+      },
+      {
+        id: 25, lesson: "Bài 28", level: "Nhận biết",
+        q: "Lệnh nào trong GIMP cho phép mở nhiều tệp ảnh cùng lúc và tự động đưa mỗi tệp thành một lớp ảnh riêng biệt?",
+        options: ["File -> Open", "File -> Open as Layers...", "File -> New", "File -> Export As"],
+        ans: 1,
+        exp: "File -> Open as Layers... mở các file ảnh thành từng layer độc lập trong một dự án."
+      },
+      {
+        id: 26, lesson: "Bài 28", level: "Nhận biết",
+        q: "Khi xuất tệp ảnh động GIF trong GIMP, thông số 'Delay between frames where unspecified' quyết định điều gì?",
+        options: [
+          "Dung lượng của tệp ảnh GIF",
+          "Thời gian xuất hiện (độ trễ) giữa các khung hình, tính bằng miligiây (ms)",
+          "Kích thước chiều rộng và chiều cao của ảnh",
+          "Số lượng màu sắc hiển thị trên ảnh"
+        ],
+        ans: 1,
+        exp: "Delay between frames quy định độ trễ thời gian hiển thị giữa hai frame liên tiếp (ms)."
+      },
+      {
+        id: 27, lesson: "Bài 28", level: "Thông hiểu",
+        q: "Lệnh Merge Down trong menu ngữ cảnh của hộp thoại Layer có chức năng gì?",
+        options: [
+          "Xóa lớp ảnh đang chọn",
+          "Gộp lớp ảnh đang chọn với lớp ảnh nằm ngay phía dưới nó",
+          "Nhân đôi lớp ảnh đang chọn",
+          "Đưa lớp ảnh đang chọn lên vị trí trên cùng"
+        ],
+        ans: 1,
+        exp: "Merge Down gộp lớp đang chọn dính liền vào lớp nằm ngay bên dưới."
+      },
+      {
+        id: 28, lesson: "Bài 28", level: "Thông hiểu",
+        q: "Muốn xem trước (preview) chuyển động của ảnh động trực tiếp trong phần mềm GIMP trước khi xuất tệp, em vào menu nào?",
+        options: [
+          "Filters -> Animation -> Playback",
+          "File -> Save",
+          "Edit -> Preferences",
+          "Tools -> Paint Tools"
+        ],
+        ans: 0,
+        exp: "Filters -> Animation -> Playback mở cửa sổ trình chiếu thử nghiệm ảnh động."
+      },
+      {
+        id: 29, lesson: "Bài 28", level: "Vận dụng",
+        q: "Một tệp ảnh trong GIMP hiện có 3 lớp ảnh ban đầu. Người làm dùng hiệu ứng Blend (Filters -> Animation -> Blend) với tham số số khung hình trung gian (Intermediate frames) bằng 4. Tổng số khung hình (lớp ảnh) thu được sau khi chạy hiệu ứng là bao nhiêu?",
+        options: ["11 khung hình", "12 khung hình", "15 khung hình", "7 khung hình"],
+        ans: 0,
+        exp: "Công thức: (Số lớp gốc - 1) * (Số khung trung gian + 1) + 1 = (3 - 1) * (4 + 1) + 1 = 11 khung hình."
+      },
+      {
+        id: 30, lesson: "Bài 28", level: "Vận dụng",
+        q: "Em tạo một tệp ảnh động gồm 4 khung hình với thời gian trễ hiển thị mỗi khung hình được đặt là 500 ms. Thời gian để tệp ảnh động chạy hoàn thành một chu kỳ từ khung hình đầu đến khung hình cuối là bao nhiêu giây?",
+        options: ["0.5 giây", "2.0 giây", "4.0 giây", "2000 giây"],
+        ans: 1,
+        exp: "Tổng thời gian = 4 khung hình x 500 ms = 2000 ms = 2.0 giây."
+      }
+    ];
+
+    // =========================================================================
+    // 2. TẠO 5 MÃ ĐỀ & THUẬT TOÁN XÁO TRỘN ĐỀ THI
+    // =========================================================================
+    const examCodes = ["1101", "1102", "1103", "1104", "1105"];
+    let currentExamData = [];
+    let currentStudentAnswers = {};
+    let selectedStudentInfo = { className: "", studentName: "", examCode: "" };
+    let timerInterval = null;
+    let secondsLeft = 15 * 60; // 15 PHÚT (900 GIÂY)
+    let teacherGradeBook = [];
+
+    function generateShuffledExam(code) {
+      let seed = parseInt(code) || 1101;
+      function pseudoRandom() {
+        seed = (seed * 9301 + 49297) % 233280;
+        return seed / 233280;
+      }
+
+      let qList = JSON.parse(JSON.stringify(masterQuestions));
+      for (let i = qList.length - 1; i > 0; i--) {
+        const j = Math.floor(pseudoRandom() * (i + 1));
+        [qList[i], qList[j]] = [qList[j], qList[i]];
+      }
+
+      qList.forEach(q => {
+        let correctContent = q.options[q.ans];
+        for (let i = q.options.length - 1; i > 0; i--) {
+          const j = Math.floor(pseudoRandom() * (i + 1));
+          [q.options[i], q.options[j]] = [q.options[j], q.options[i]];
+        }
+        q.ans = q.options.indexOf(correctContent);
+      });
+
+      return qList;
+    }
+
+    // =========================================================================
+    // 3. TỰ ĐỘNG NẠP DANH SÁCH HỌC SINH TỪ EXCEL THEO LỚP KHỐI 11
+    // =========================================================================
+    let localFilesMap = {};
+    const defaultStudents = [
+      "Nguyễn Hoàng Nam", "Trần Thị Mai Anh", "Lê Văn Tuấn", "Phạm Minh Hoàng",
+      "Đỗ Bích Ngọc", "Vũ Quốc Bảo", "Nguyễn Thu Hà", "Bùi Thanh Trúc",
+      "Đặng Đình Phong", "Hoàng Kim Ngân", "Trịnh Tiến Đạt", "Lương Mỹ Duyên"
+    ];
+
+    function handleFolderSelect(e) {
+      localFilesMap = {};
+      for (let file of e.target.files) {
+        if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+          localFilesMap[file.name] = file;
+        }
+      }
+      document.getElementById('class-status').innerHTML = `<span class="text-emerald-400">Đã liên kết ${Object.keys(localFilesMap).length} file Excel từ thư mục máy tính!</span>`;
+      loadStudentListByClass();
+    }
+
+    async function loadStudentListByClass() {
+      const cls = document.getElementById('select-class').value;
+      const studentSelect = document.getElementById('select-student');
+      const statusEl = document.getElementById('class-status');
+      
+      studentSelect.innerHTML = '<option value="">-- Đang nạp danh sách... --</option>';
+      studentSelect.disabled = true;
+      if (!cls) {
+        studentSelect.innerHTML = '<option value="">-- Vui lòng chọn lớp trước --</option>';
+        return;
+      }
+
+      const fileName = `${cls}.xlsx`;
+
+      if (localFilesMap[fileName]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          parseExcelAndPopulate(e.target.result, cls);
+        };
+        reader.readAsArrayBuffer(localFilesMap[fileName]);
+        return;
+      }
+
+      try {
+        const res = await fetch(`./${fileName}`);
+        if (!res.ok) throw new Error("Chưa thấy file");
+        const buf = await res.arrayBuffer();
+        parseExcelAndPopulate(buf, cls);
+      } catch (err) {
+        statusEl.innerHTML = `<span class="text-amber-400">Dùng danh sách mẫu tạm thời (${cls})</span>`;
+        populateSelect(defaultStudents, cls);
+      }
+    }
+
+    function parseExcelAndPopulate(buffer, cls) {
+      try {
+        const wb = XLSX.read(buffer, { type: 'array' });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        const names = [];
+
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i];
+          if (!r || r.length === 0) continue;
+          let fullName = r[2] ? `${r[1] || ''} ${r[2]}`.trim() : (r[1] || r[0]);
+          if (fullName && typeof fullName === 'string' && fullName.length > 2 && !fullName.toLowerCase().includes('họ và tên')) {
+            names.push(fullName.trim());
+          }
+        }
+
+        if (names.length > 0) {
+          document.getElementById('class-status').innerHTML = `<span class="text-emerald-400">Đã tìm thấy ${names.length} học sinh lớp ${cls} từ file Excel.</span>`;
+          populateSelect(names, cls);
+        } else {
+          populateSelect(defaultStudents, cls);
+        }
+      } catch (e) {
+        populateSelect(defaultStudents, cls);
+      }
+    }
+
+    function populateSelect(names, cls) {
+      const studentSelect = document.getElementById('select-student');
+      studentSelect.innerHTML = '<option value="">-- Chọn tên của em --</option>' +
+        names.map(name => `<option value="${name}">${name}</option>`).join('');
+      studentSelect.disabled = false;
+    }
+
+    // =========================================================================
+    // 4. BẮT ĐẦU VÀO PHÒNG LÀM BÀI 15 PHÚT
+    // =========================================================================
+    function startExam() {
+      const cls = document.getElementById('select-class').value;
+      const name = document.getElementById('select-student').value;
+
+      if (!cls) { alert("Vui lòng chọn lớp học!"); return; }
+      if (!name) { alert("Vui lòng chọn họ và tên học sinh!"); return; }
+
+      const assignedCode = examCodes[Math.floor(Math.random() * examCodes.length)];
+
+      selectedStudentInfo = {
+        className: cls,
+        studentName: name,
+        examCode: assignedCode,
+        startTime: new Date().toLocaleTimeString('vi-VN')
+      };
+
+      currentExamData = generateShuffledExam(assignedCode);
+      currentStudentAnswers = {};
+
+      document.getElementById('exam-student-name').innerText = `Thí sinh: ${name}`;
+      document.getElementById('exam-student-class').innerText = cls;
+      document.getElementById('exam-code').innerText = assignedCode;
+
+      renderExamQuestions();
+
+      document.getElementById('screen-login').classList.add('hidden');
+      document.getElementById('screen-exam').classList.remove('hidden');
+
+      startExamTimer();
+    }
+
+    function renderExamQuestions() {
+      const container = document.getElementById('questions-container');
+      container.innerHTML = currentExamData.map((item, idx) => `
+        <div class="bg-slate-900/90 border border-slate-800 p-5 rounded-2xl shadow-lg space-y-3" id="q-card-${idx}">
+          <div class="flex items-center justify-between text-xs text-slate-400 pb-2 border-b border-slate-800">
+            <span class="font-bold text-sky-400">Câu ${idx + 1} / 30 [${item.level}]</span>
+            <span class="text-slate-500">${item.lesson}</span>
+          </div>
+
+          <p class="text-sm md:text-base font-semibold text-slate-100 leading-relaxed">${item.q}</p>
+
+          <div class="space-y-2 pt-1">
+            ${item.options.map((opt, optIdx) => `
+              <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-800/60 hover:border-slate-700 cursor-pointer transition text-xs md:text-sm font-medium text-slate-200">
+                <input type="radio" name="question_${idx}" value="${optIdx}" onchange="selectAnswer(${idx},${optIdx})" class="mt-0.5 text-indigo-600 focus:ring-0">
+                <span class="font-bold text-sky-400 shrink-0">${String.fromCharCode(65 + optIdx)}.</span>
+                <span class="leading-relaxed">${opt}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function selectAnswer(qIdx, optIdx) {
+      currentStudentAnswers[qIdx] = optIdx;
+      
+      const card = document.getElementById(`q-card-${qIdx}`);
+      card.classList.add('border-indigo-500/50');
+
+      const answeredCount = Object.keys(currentStudentAnswers).length;
+      document.getElementById('progress-text').innerText = `${answeredCount} / 30`;
+      document.getElementById('progress-bar').style.width = `${(answeredCount / 30) * 100}%`;
+    }
+
+    function startExamTimer() {
+      secondsLeft = 15 * 60; // 15 PHÚT = 900 GIÂY
+      clearInterval(timerInterval);
+
+      timerInterval = setInterval(() => {
+        secondsLeft--;
+        const mins = Math.floor(secondsLeft / 60);
+        const secs = secondsLeft % 60;
+        document.getElementById('exam-timer').innerText = 
+          `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+        if (secondsLeft <= 0) {
+          clearInterval(timerInterval);
+          alert("Hết 15 phút làm bài! Hệ thống đang tự động thu bài.");
+          submitExam(true);
+        }
+      }, 1000);
+    }
+
+    // =========================================================================
+    // 5. CHẤM ĐIỂM (THANG 10) & XUẤT KẾT QUẢ
+    // =========================================================================
+    function submitExam(isAuto = false) {
+      const answeredCount = Object.keys(currentStudentAnswers).length;
+      if (!isAuto && answeredCount < 30) {
+        if (!confirm(`Em mới hoàn thành ${answeredCount} / 30 câu hỏi. Em có chắc chắn muốn nộp bài sớm không?`)) {
+          return;
+        }
+      }
+
+      clearInterval(timerInterval);
+
+      let correctCount = 0;
+      currentExamData.forEach((q, idx) => {
+        if (currentStudentAnswers[idx] === q.ans) {
+          correctCount++;
+        }
+      });
+
+      // Thang điểm 10 làm tròn 2 chữ số thập phân
+      const score10 = ((correctCount / 30) * 10).toFixed(2);
+
+      const nowStr = new Date().toLocaleTimeString('vi-VN') + " " + new Date().toLocaleDateString('vi-VN');
+      teacherGradeBook.push({
+        name: selectedStudentInfo.studentName,
+        className: selectedStudentInfo.className,
+        code: selectedStudentInfo.examCode,
+        correct: correctCount,
+        score: score10,
+        time: nowStr
+      });
+
+      document.getElementById('screen-exam').classList.add('hidden');
+      document.getElementById('screen-result').classList.remove('hidden');
+
+      document.getElementById('res-name').innerText = selectedStudentInfo.studentName;
+      document.getElementById('res-class').innerText = selectedStudentInfo.className;
+      document.getElementById('res-code').innerText = selectedStudentInfo.examCode;
+      document.getElementById('res-score-10').innerText = score10;
+      document.getElementById('res-correct-count').innerText = `Đúng: ${correctCount} / 30 câu`;
+      document.getElementById('result-timestamp').innerText = `Thời gian nộp bài: ${nowStr}`;
+
+      confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
+    }
+
+    // =========================================================================
+    // 6. HÀM QUAY VỀ TRANG CHỦ
+    // =========================================================================
+    function goHome() {
+      // Đặt lại dữ liệu phiên thi
+      clearInterval(timerInterval);
+      currentStudentAnswers = {};
+      currentExamData = [];
+      
+      // Xóa form chọn thí sinh
+      document.getElementById('select-student').value = "";
+      
+      // Chuyển màn hình về trang chủ
+      document.getElementById('screen-result').classList.add('hidden');
+      document.getElementById('screen-exam').classList.add('hidden');
+      document.getElementById('screen-login').classList.remove('hidden');
+      
+      // Cuộn lên đầu trang
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // =========================================================================
+    // 7. XUẤT FILE EXCEL & TẠO QR CODE
+    // =========================================================================
+    function exportTeacherExcel() {
+      if (teacherGradeBook.length === 0) {
+        alert("Chưa có học sinh nào nộp bài để xuất bảng điểm!");
+        return;
+      }
+
+      const rows = [
+        ["STT", "HỌ VÀ TÊN", "LỚP", "MÃ ĐỀ", "SỐ CÂU ĐÚNG", "ĐIỂM (THANG 10)", "THỜI GIAN NỘP BÀI"]
+      ];
+
+      teacherGradeBook.forEach((st, idx) => {
+        rows.push([idx + 1, st.name, st.className, st.code, `${st.correct}/30`, st.score, st.time]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{ wch: 6 }, { wch: 25 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 16 }, { wch: 22 }];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "DiemThuongXuyen");
+
+      XLSX.writeFile(wb, `BangDiem_ThuongXuyen_Tin11_15Phut.xlsx`);
+    }
+
+    function toggleQRModal() {
+      const modal = document.getElementById('modal-qr');
+      modal.classList.toggle('hidden');
+
+      if (!modal.classList.contains('hidden')) {
+        const box = document.getElementById('qrcode-box');
+        box.innerHTML = '';
+        new QRCode(box, {
+          text: window.location.href,
+          width: 200,
+          height: 200
+        });
+      }
+    }
+  </script>
+</body>
+</html>
