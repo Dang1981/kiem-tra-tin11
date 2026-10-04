@@ -29,12 +29,15 @@
     </div>
 
     <!-- Nút điều khiển giáo viên -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center flex-wrap gap-2">
       <button onclick="toggleQRModal()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center gap-1.5 shadow">
         <i class="fa-solid fa-qrcode"></i> <span>Mã QR</span>
       </button>
+      <button onclick="syncAllToGitHub()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-sky-400 font-bold text-xs rounded-xl border border-slate-700 transition flex items-center gap-1.5 shadow">
+        <i class="fa-brands fa-github"></i> <span>Lưu GitHub</span>
+      </button>
       <button onclick="exportTeacherExcel()" class="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow">
-        <i class="fa-solid fa-file-excel"></i> <span>Xuất điểm</span>
+        <i class="fa-solid fa-file-excel"></i> <span>Xuất Excel</span>
       </button>
     </div>
   </header>
@@ -182,7 +185,17 @@
 
   <script>
     // =========================================================================
-    // 1. NGÂN HÀNG 30 CÂU HỎI TIN HỌC 11 (CHỦ ĐỀ 7 - GIMP)
+    // 1. CẤU HÌNH GITHUB ĐỂ LƯU ĐIỂM TỰ ĐỘNG
+    // =========================================================================
+    const GITHUB_CONFIG = {
+      owner: "Dang1981",
+      repo: "kiem-tra-tin11",
+      filePath: "diem_thi_tong_hop.json",
+      branch: "main" // Tên nhánh mặc định của bạn
+    };
+
+    // =========================================================================
+    // 2. NGÂN HÀNG 30 CÂU HỎI TIN HỌC 11 (CHỦ ĐỀ 7 - GIMP)
     // =========================================================================
     const masterQuestions = [
       {
@@ -493,7 +506,7 @@
     ];
 
     // =========================================================================
-    // 2. TẠO 5 MÃ ĐỀ & THUẬT TOÁN XÁO TRỘN ĐỀ THI
+    // 3. TẠO 5 MÃ ĐỀ & THUẬT TOÁN XÁO TRỘN ĐỀ THI
     // =========================================================================
     const examCodes = ["1101", "1102", "1103", "1104", "1105"];
     let currentExamData = [];
@@ -529,7 +542,7 @@
     }
 
     // =========================================================================
-    // 3. TỰ ĐỘNG NẠP DANH SÁCH HỌC SINH TỪ EXCEL THEO LỚP KHỐI 11
+    // 4. TỰ ĐỘNG NẠP DANH SÁCH HỌC SINH TỪ EXCEL THEO LỚP KHỐI 11
     // =========================================================================
     let localFilesMap = {};
     const defaultStudents = [
@@ -618,7 +631,7 @@
     }
 
     // =========================================================================
-    // 4. BẮT ĐẦU VÀO PHÒNG LÀM BÀI 15 PHÚT
+    // 5. BẮT ĐẦU VÀO PHÒNG LÀM BÀI 15 PHÚT
     // =========================================================================
     function startExam() {
       const cls = document.getElementById('select-class').value;
@@ -706,7 +719,7 @@
     }
 
     // =========================================================================
-    // 5. CHẤM ĐIỂM (THANG 10) & XUẤT KẾT QUẢ
+    // 6. CHẤM ĐIỂM (THANG 10) & XUẤT KẾT QUẢ
     // =========================================================================
     function submitExam(isAuto = false) {
       const answeredCount = Object.keys(currentStudentAnswers).length;
@@ -725,15 +738,14 @@
         }
       });
 
-      // Thang điểm 10 làm tròn 2 chữ số thập phân
       const score10 = ((correctCount / 30) * 10).toFixed(2);
-
       const nowStr = new Date().toLocaleTimeString('vi-VN') + " " + new Date().toLocaleDateString('vi-VN');
+      
       teacherGradeBook.push({
         name: selectedStudentInfo.studentName,
         className: selectedStudentInfo.className,
         code: selectedStudentInfo.examCode,
-        correct: correctCount,
+        correct: `${correctCount}/30`,
         score: score10,
         time: nowStr
       });
@@ -751,29 +763,90 @@
       confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
     }
 
-    // =========================================================================
-    // 6. HÀM QUAY VỀ TRANG CHỦ
-    // =========================================================================
     function goHome() {
-      // Đặt lại dữ liệu phiên thi
       clearInterval(timerInterval);
       currentStudentAnswers = {};
       currentExamData = [];
-      
-      // Xóa form chọn thí sinh
       document.getElementById('select-student').value = "";
-      
-      // Chuyển màn hình về trang chủ
       document.getElementById('screen-result').classList.add('hidden');
       document.getElementById('screen-exam').classList.add('hidden');
       document.getElementById('screen-login').classList.remove('hidden');
-      
-      // Cuộn lên đầu trang
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     // =========================================================================
-    // 7. XUẤT FILE EXCEL & TẠO QR CODE
+    // 7. LƯU ĐIỂM LÊN GITHUB QUA REST API
+    // =========================================================================
+    async function syncAllToGitHub() {
+      if (teacherGradeBook.length === 0) {
+        alert("Chưa có dữ liệu bài làm nào để lưu lên GitHub!");
+        return;
+      }
+
+      let token = localStorage.getItem("gh_token");
+      if (!token) {
+        token = prompt("Nhập GitHub Personal Access Token (chỉ giáo viên nhập 1 lần trên máy này):");
+        if (!token) {
+          alert("Chưa có token, không thể lưu lên GitHub!");
+          return;
+        }
+        localStorage.setItem("gh_token", token.trim());
+      }
+
+      const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.filePath}`;
+
+      try {
+        let existingData = [];
+        let sha = null;
+
+        const getRes = await fetch(url, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Accept": "application/vnd.github.v3+json"
+          }
+        });
+
+        if (getRes.status === 200) {
+          const fileInfo = await getRes.json();
+          sha = fileInfo.sha;
+          const contentStr = decodeURIComponent(escape(atob(fileInfo.content)));
+          existingData = JSON.parse(contentStr);
+        }
+
+        // Gộp dữ liệu mới vào dữ liệu cũ
+        const combinedData = [...existingData, ...teacherGradeBook];
+
+        const updatedContent = btoa(unescape(encodeURIComponent(JSON.stringify(combinedData, null, 2))));
+
+        const putRes = await fetch(url, {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            message: `Cập nhật ${teacherGradeBook.length} kết quả bài làm mới`,
+            content: updatedContent,
+            branch: GITHUB_CONFIG.branch,
+            sha: sha
+          })
+        });
+
+        if (putRes.ok) {
+          alert(`Đã đồng bộ thành công ${teacherGradeBook.length} kết quả lên GitHub repository!`);
+        } else {
+          const err = await putRes.json();
+          alert(`Lỗi khi lưu lên GitHub: ${err.message}`);
+        }
+      } catch (error) {
+        console.error("Lỗi:", error);
+        alert("Không thể kết nối đến GitHub API. Vui lòng kiểm tra lại kết nối mạng hoặc Token.");
+      }
+    }
+
+    // =========================================================================
+    // 8. XUẤT FILE EXCEL & TẠO QR CODE
     // =========================================================================
     function exportTeacherExcel() {
       if (teacherGradeBook.length === 0) {
@@ -786,7 +859,7 @@
       ];
 
       teacherGradeBook.forEach((st, idx) => {
-        rows.push([idx + 1, st.name, st.className, st.code, `${st.correct}/30`, st.score, st.time]);
+        rows.push([idx + 1, st.name, st.className, st.code, st.correct, st.score, st.time]);
       });
 
       const ws = XLSX.utils.aoa_to_sheet(rows);
